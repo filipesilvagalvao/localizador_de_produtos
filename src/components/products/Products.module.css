@@ -1,0 +1,18 @@
+.products{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px 0;
+}
+
+.product__messageSearch{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    height: calc(100dvh - 348px);
+    font-size: 1.5rem;
+    font-style: italic;
+    letter-spacing: 1.2;
+    color: var(--text-color-3);
+}
