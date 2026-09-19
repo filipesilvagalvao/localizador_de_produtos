@@ -20,6 +20,7 @@ Sistema web para localização de produtos em um estoque físico. A aplicação 
 - [Adicionando novas categorias](#adicionando-novas-categorias)
 - [Tratamento de erros](#tratamento-de-erros)
 - [Build de produção](#build-de-produção)
+- [Testes](#testes)
 - [Limitações conhecidas](#limitações-conhecidas)
 - [Próximos passos sugeridos](#próximos-passos-sugeridos)
 
@@ -299,6 +300,40 @@ npm run start
 Por padrão, a aplicação sobe na porta **3000**. Para mudar, use `PORT=4000 npm run start` (Linux/macOS) ou `set PORT=4000 && npm run start` (Windows).
 
 Para deploy, a recomendação oficial é a **[Vercel](https://vercel.com/new)** — basta conectar o repositório e ela detecta o Next.js automaticamente.
+
+---
+
+## Testes
+
+A suíte usa **Jest 29** + **@testing-library/react 16** + **@testing-library/user-event 14** com `jsdom`. Os testes ficam co-localizados com o código (`*.test.ts(x)`).
+
+### Comandos
+
+```bash
+npm test              # roda toda a suite
+npm run test:watch     # modo watch
+npm run test:coverage  # com cobertura
+```
+
+### Cobertura
+
+| Arquivo                                  | Tipo            | O que valida                                                               |
+| ---------------------------------------- | --------------- | -------------------------------------------------------------------------- |
+| `src/utils/fetchData.test.ts`            | **Unitário**    | `fetchData` com `fetch` mockado: sucesso, `!ok`, exceção                   |
+| `src/contexts/DataContext.test.tsx`      | **Unitário**    | Estado inicial, setters e erro quando usado fora do Provider               |
+| `src/components/table/Table.test.tsx`    | **Integração**  | Renderização do cartão com nome, células e imagem                          |
+| `src/components/products/Products.test.tsx` | **Integração** | Todos os estados da UI: erro, loading, vazio, sentinela `none`, resultados |
+| `src/components/search/Search.test.tsx`  | **Integração**  | Carga inicial, busca por Enter, filtros de categoria, erro da API          |
+
+### Detalhes importantes
+
+- **Mocks do `fetch`**: o `fetchData` é mockado direto em `global.fetch`.
+- **CSS Modules**: mapeados para `tests/styleMock.js` (objeto vazio) via `moduleNameMapper` no `jest.config.js`.
+- **Mocks do Font Awesome**: o ícone de lupa renderiza normalmente em `jsdom`, sem mock extra.
+- **Testes de interação**: usamos `@testing-library/user-event` (simula interação real, com `type`, `click`, `Enter` etc).
+- **`SearchProvider`** é renderizado em volta dos componentes que dependem do contexto. Para evitar loops de re-render ao "semear" o contexto nos testes do `Products`, o seeding é feito em `useLayoutEffect` com dependências vazias.
+
+Total: **5 suites · 25 testes**.
 
 ---
 
