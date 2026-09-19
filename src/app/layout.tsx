@@ -10,7 +10,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Localizador de produtos"
+  title: "Sistema Localizador de produtos"
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
