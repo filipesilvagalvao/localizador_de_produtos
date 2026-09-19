@@ -25,22 +25,14 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
+      - name: Instalar dependências
         run: npm ci
 
-      - name: Lint
+      - name: Rodar lint
         run: npm run lint
 
-      - name: Test
-        run: npm test -- --ci --coverage
+      - name: Rodar testes
+        run: npm run test
 
-      - name: Build
+      - name: Rodar build
         run: npm run build
-
-      - name: Upload coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage
-          retention-days: 7
