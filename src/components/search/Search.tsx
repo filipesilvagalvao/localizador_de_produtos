@@ -10,6 +10,8 @@ function Search() {
     const { setSearch, setLoading, setError } = useSearch(); //função que serve para armazenar o resultado pesquisado e coloca isso em global
 
     const [data, setData] = useState<Data[]>([]);
+    const [term, setTerm] = useState("");//useState para capturar o termo escrito
+    const [category, setCategory] = useState("")
 
     //useEffect para puxar todos os dados inicialmente puxados pela função fetchData(), pega tudo oque há na planilha
     useEffect(() => {
@@ -28,9 +30,6 @@ function Search() {
         }
         loadData();
     }, []);
-
-    const [term, setTerm] = useState("");//useState para capturar o termo escrito
-    const [category, setCategory] = useState("")
 
     const normalize = (str: string) =>
         str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()

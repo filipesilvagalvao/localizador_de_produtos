@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect } from "react";
 import Search from "./Search";
 import { SearchProvider, useSearch } from "@/contexts/DataContext";
 import fetchData, { Data } from "@/utils/fetchData";
@@ -60,9 +61,11 @@ let latestLoading = true;
 
 function ContextSpy() {
   const { search, error, loading } = useSearch();
-  latestSearch = search;
-  latestError = error;
-  latestLoading = loading;
+  useEffect(() => {
+    latestSearch = search;
+    latestError = error;
+    latestLoading = loading;
+  });
   return null;
 }
 

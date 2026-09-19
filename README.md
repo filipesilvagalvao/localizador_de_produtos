@@ -14,6 +14,7 @@ Sistema web para localização de produtos em um estoque físico. A aplicação 
 - [Como funciona (fluxo de dados)](#como-funciona-fluxo-de-dados)
 - [Configurando a planilha no Google Sheets](#configurando-a-planilha-no-google-sheets)
 - [Instalação e execução](#instalação-e-execução)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Como usar a aplicação](#como-usar-a-aplicação)
 - [Modelo de dados (Data)](#modelo-de-dados-data)
 - [Configuração de categorias](#configuração-de-categorias)
@@ -21,6 +22,7 @@ Sistema web para localização de produtos em um estoque físico. A aplicação 
 - [Tratamento de erros](#tratamento-de-erros)
 - [Build de produção](#build-de-produção)
 - [Testes](#testes)
+- [CI / GitHub Actions](#ci--github-actions)
 - [Limitações conhecidas](#limitações-conhecidas)
 - [Próximos passos sugeridos](#próximos-passos-sugeridos)
 
@@ -108,11 +110,7 @@ localizador-de-produtos/
 
 ## Configurando a planilha no Google Sheets
 
-A URL da API está fixa em `src/utils/fetchData.ts`:
-
-```ts
-const url = "https://script.googleusercontent.com/macros/echo?user_content_key=...";
-```
+A URL do endpoint JSON é configurada via env var `NEXT_PUBLIC_API_URL` — veja a seção [Variáveis de ambiente](#variáveis-de-ambiente).
 
 ### Estrutura esperada da planilha
 
@@ -132,12 +130,6 @@ A planilha precisa ter **uma linha de cabeçalho** e as colunas abaixo (os nomes
 - **Lado** — texto (ex.: `Esquerdo`, `Direito`)
 - **Imagem** — URL pública de uma imagem
 - **Categoria** — texto em **minúsculas e sem acentos** (é normalizado antes de comparar). Valores suportados hoje: `conexoes hidraulicas`, `eletrica`, `ferramentas`, `banheiro`
-
-### Para trocar a URL da planilha
-
-1. Publique sua planilha (Apps Script ou ferramenta equivalente) e gere a URL JSON.
-2. Abra `src/utils/fetchData.ts`.
-3. Substitua o valor da constante `url` pela nova URL.
 
 ---
 
@@ -159,6 +151,30 @@ npm run dev
 ```
 
 A aplicação ficará disponível em <http://localhost:3000>.
+
+> Antes de subir, configure a variável `NEXT_PUBLIC_API_URL` (veja a próxima seção). Sem ela o `fetchData` simplesmente não consegue buscar a planilha.
+
+---
+
+## Variáveis de ambiente
+
+A URL da planilha **não é mais hardcoded** — ela é lida em `src/utils/fetchData.ts` a partir da variável `NEXT_PUBLIC_API_URL`. Em `Client Components` (caso desta aplicação), apenas env vars com o prefixo `NEXT_PUBLIC_` ficam visíveis no browser, por isso o prefixo é obrigatório.
+
+### Desenvolvimento
+
+Crie um arquivo `.env.local` na raiz do projeto:
+
+```bash
+NEXT_PUBLIC_API_URL="https://script.googleusercontent.com/macros/echo?user_content_key=..."
+```
+
+O `.gitignore` já ignora `.env*`, então esse arquivo não vai para o repositório.
+
+### Trocar a fonte de dados
+
+1. Publique sua planilha (Apps Script ou ferramenta equivalente) com a estrutura descrita acima e gere a URL JSON.
+2. Atualize `NEXT_PUBLIC_API_URL` no seu `.env.local` (e nas env vars do serviço de hospedagem).
+3. Reinicie o servidor de dev (`npm run dev`) para que a mudança seja carregada.
 
 ### Outros scripts
 
@@ -337,9 +353,35 @@ Total: **5 suites · 25 testes**.
 
 ---
 
+## CI / GitHub Actions
+
+O projeto tem um workflow em `.github/workflows/ci.yml` que roda automaticamente em todo **push** e **pull request** para a branch `main`:
+
+1. Checkout do código
+2. Setup do Node.js 20 com cache do `npm` (via `package-lock.json`)
+3. `npm ci` — instalação limpa
+4. `npm run lint` — ESLint
+5. `npm test -- --ci --coverage` — Jest com cobertura
+6. `npm run build` — build de produção do Next.js
+7. Upload da pasta `coverage/` como artifact (disponível por 7 dias na página do run, em *Summary → Artifacts*)
+
+O workflow usa `concurrency: cancel-in-progress` por branch: pushes novos para a mesma branch cancelam execuções anteriores, evitando gastar minutos do GitHub.
+
+Para ver o resultado, abra a aba **Actions** no GitHub. Falhas em qualquer uma das três etapas (lint/teste/build) bloqueiam o merge do PR.
+
+### Adicionando um badge no README
+
+Depois do primeiro run, você pode colocar um badge no topo do README para ver o status de um glance:
+
+```markdown
+![CI](https://github.com/<usuario>/<repo>/actions/workflows/ci.yml/badge.svg)
+```
+
+---
+
 ## Limitações conhecidas
 
-- A URL da planilha está **hardcoded** — não há UI para trocar a fonte de dados em tempo de execução.
+- A URL da planilha é definida via env var `NEXT_PUBLIC_API_URL` — não há UI para trocar a fonte de dados em tempo de execução (é preciso reiniciar o servidor/novo deploy).
 - Categorias são adicionadas **manualmente no código** (veja a seção *Adicionando novas categorias*).
 - Não há cache do lado do cliente: cada reload faz uma nova request à planilha.
 - Não há paginação: se a planilha tiver milhares de linhas, a renderização pode ficar lenta.
@@ -349,12 +391,11 @@ Total: **5 suites · 25 testes**.
 
 ## Próximos passos sugeridos
 
-- Mover a URL do endpoint para variável de ambiente (`.env.local`) com `NEXT_PUBLIC_SHEETS_URL`.
 - Internacionalizar mensagens de erro/loading.
 - Adicionar ordenação (por prateleira, alfabética, etc.).
 - Adicionar cache com `useSWR` ou `React Query`.
 - Persistir a categoria ativa na URL (deep linking).
-- Testes unitários com Vitest/Jest para `Search`, `Products` e `fetchData`.
+- Mover o `fetch` para um Server Component (evita expor a URL ao client e elimina o *flicker* de loading).
 
 ---
 
