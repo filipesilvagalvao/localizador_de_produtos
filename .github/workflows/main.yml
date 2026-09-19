@@ -35,4 +35,6 @@ jobs:
         run: npm run test
 
       - name: Rodar build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
         run: npm run build
