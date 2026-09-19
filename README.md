@@ -4,6 +4,8 @@ Sistema web para localização de produtos em um estoque físico. A aplicação 
 
 > **Resumo**: a planilha é a fonte da verdade — adicionar, editar e remover produtos é feito diretamente lá. A aplicação é responsável por leitura, busca, filtros e exibição.
 
+> **Demo online**: https://filipesilvagalvao.github.io/localizador_de_produtos/
+
 ---
 
 ## Sumário
@@ -176,6 +178,10 @@ O `.gitignore` já ignora `.env*`, então esse arquivo não vai para o repositó
 2. Atualize `NEXT_PUBLIC_API_URL` no seu `.env.local` (e nas env vars do serviço de hospedagem).
 3. Reinicie o servidor de dev (`npm run dev`) para que a mudança seja carregada.
 
+### Em produção (CI / GitHub Pages)
+
+A env var é lida em **build time** (por causa do `output: "export"`). Ela **NÃO é commitada** — cadastre-a uma vez em **Settings → Secrets and variables → Actions → Variables** com o nome `NEXT_PUBLIC_API_URL`. O workflow `.github/workflows/main.yml` já injeta essa variable automaticamente no step de build.
+
 ### Outros scripts
 
 ```bash
@@ -310,12 +316,48 @@ Os estados são controlados em `src/contexts/DataContext.tsx` (`loading`, `error
 
 ```bash
 npm run build
+```
+
+A build usa `output: "export"` em `next.config.ts` (definido para o deploy em **GitHub Pages**), então o Next.js gera um site estático em `out/` — não há servidor Node.js para subir.
+
+Para rodar a build localmente em modo servidor (sem export):
+
+```bash
+# 1. abra "output": "export" no next.config.ts
+# 2. então:
+npm run build
 npm run start
 ```
 
 Por padrão, a aplicação sobe na porta **3000**. Para mudar, use `PORT=4000 npm run start` (Linux/macOS) ou `set PORT=4000 && npm run start` (Windows).
 
-Para deploy, a recomendação oficial é a **[Vercel](https://vercel.com/new)** — basta conectar o repositório e ela detecta o Next.js automaticamente.
+### Deploy em GitHub Pages
+
+A URL pública é servida em **https://filipesilvagalvao.github.io/localizador_de_produtos/** — publicado como *project site* (o `basePath` em `next.config.ts` precisa bater com o nome do repo).
+
+Para publicar a pasta `out/` a cada push em `main`:
+
+```yaml
+# .github/workflows/main.yml (trecho extra, fora do job de CI)
+deploy:
+  needs: build
+  runs-on: ubuntu-latest
+  permissions:
+    pages: write
+    id-token: write
+  environment:
+    name: github-pages
+    url: ${{ steps.deployment.outputs.page_url }}
+  steps:
+    - uses: actions/configure-pages@v5
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: out
+    - id: deployment
+      uses: actions/deploy-pages@v4
+```
+
+Não esqueça de habilitar **Settings → Pages → Source: GitHub Actions** no repositório.
 
 ---
 
@@ -355,15 +397,14 @@ Total: **5 suites · 25 testes**.
 
 ## CI / GitHub Actions
 
-O projeto tem um workflow em `.github/workflows/ci.yml` que roda automaticamente em todo **push** e **pull request** para a branch `main`:
+O projeto tem um workflow em `.github/workflows/main.yml` que roda automaticamente em todo **push** e **pull request** para a branch `main`:
 
 1. Checkout do código
 2. Setup do Node.js 20 com cache do `npm` (via `package-lock.json`)
 3. `npm ci` — instalação limpa
 4. `npm run lint` — ESLint
-5. `npm test -- --ci --coverage` — Jest com cobertura
-6. `npm run build` — build de produção do Next.js
-7. Upload da pasta `coverage/` como artifact (disponível por 7 dias na página do run, em *Summary → Artifacts*)
+5. `npm run test` — Jest em modo `ci` (saída enxuta, sem watch)
+6. `npm run build` — build estática do Next.js (`output: "export"`) com a env var `NEXT_PUBLIC_API_URL` injetada a partir de `vars.NEXT_PUBLIC_API_URL` (cadastrada em **Settings → Secrets and variables → Actions → Variables**)
 
 O workflow usa `concurrency: cancel-in-progress` por branch: pushes novos para a mesma branch cancelam execuções anteriores, evitando gastar minutos do GitHub.
 
@@ -374,7 +415,7 @@ Para ver o resultado, abra a aba **Actions** no GitHub. Falhas em qualquer uma d
 Depois do primeiro run, você pode colocar um badge no topo do README para ver o status de um glance:
 
 ```markdown
-![CI](https://github.com/<usuario>/<repo>/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/<usuario>/<repo>/actions/workflows/main.yml/badge.svg)
 ```
 
 ---
